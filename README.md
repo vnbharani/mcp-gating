@@ -8,9 +8,9 @@ Two runnable sketches of one idea: the agent never enforces its own limits. A ga
 
 ## The tiers
 
-**Tier 1 — read-only (runs free).** ClickHouse MCP tools (read-only), telemetry API (read-only logs, no direct database connection), git clone / fetch (download repos to check whether something is a code bug).
+**Tier 1 — read-only (runs free).** Log solution tools (like Splunk, read-only), observability API (read-only logs, no direct database connection), git clone / fetch (download repos to check whether something is a code bug).
 
-**Tier 2 — bounded write (gated by an idempotency key).** Jira ticket create — one ticket per support ticket, for the dev agent. The gateway checks the key before it ever calls Jira.
+**Tier 2 — bounded write (gated by an idempotency key).** Ticket create in the ticketing solution — one ticket per support ticket, for the dev agent. The gateway checks the key before it ever calls the ticketing solution.
 
 **Tier 3 — human-only (never the agent).** git commit, git push. Code changes go via PR, after a human checks the dev agent's code.
 
@@ -18,16 +18,16 @@ Gate at the operation level, not the tool name. Same "git", different verbs, dif
 
 ## The idempotency key
 
-`key = hash(support ticket ID + action)` — for example, `hash("ticket-4821" + "create-jira")`. The gateway stores key → created Jira ticket ID and checks before calling Jira. A retry with the same key returns the same ticket; no duplicate is ever created.
+`key = hash(support ticket ID + action)` — for example, `hash("ticket-4821" + "create-ticket")`. The gateway stores key → created ticket ID and checks before calling the ticketing solution. A retry with the same key returns the same ticket; no duplicate is ever created.
 
-Why not the Jira ticket ID as the key? Jira creates it after the fact — a new ID every time. It cannot be the key.
+Why not the ticketing solution's ticket ID as the key? It creates it after the fact — a new ID every time. It cannot be the key.
 
 Why not a hash of the summary? The model rewords the summary on retry, the hash changes, and the duplicate slips through. The support ticket ID never changes — that is why it is the key.
 
 ## The sketches
 
-- `tool_gating.py` — ticket-4821 walks the gateway: the reads execute, the Jira create is held without a key and then executed with one, and the git push is refused out loud, escalating to a human instead of failing silently.
-- `idempotency_key.py` — the first create stores DEV-1001, a retry after a lost response returns the same DEV-1001, and a labelled wrong-way demo shows a reworded summary producing a different hash and a duplicate ticket.
+- `tool_gating.py` — ticket-4821 walks the gateway: the reads execute, the ticket create is held without a key and then executed with one, and the git push is refused out loud, escalating to a human instead of failing silently.
+- `idempotency_key.py` — the first create stores TKT-1001, a retry after a lost response returns the same TKT-1001, and a labelled wrong-way demo shows a reworded summary producing a different hash and a duplicate ticket.
 
 Run either one with no setup: `python3 tool_gating.py`, `python3 idempotency_key.py`. Python standard library only. Both are sketches, not production code — they show the mechanism running, they are not the answer to any problem.
 

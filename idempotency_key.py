@@ -1,14 +1,14 @@
-"""Idempotency key sketch for Jira ticket creation.
+"""Idempotency key sketch for ticket creation in a ticketing solution.
 Core mechanism only -- NOT a solution.
 
   * The key comes from the INPUT, never the output: hash of the
-    incoming support ticket id + the action. The Jira ticket id cannot
-    be the key -- Jira creates it after the fact, a new one each time.
+    incoming support ticket id + the action. The ticketing solution's ticket id cannot
+    be the key -- it creates it after the fact, a new one each time.
   * The key is stable across retries because the ticket id and the
     action never change. A hash of the summary is not: the model
     rewords the summary on retry, the hash changes, and the duplicate
     slips through.
-  * The gateway checks its store BEFORE calling Jira: key seen ->
+  * The gateway checks its store BEFORE calling the ticketing solution: key seen ->
     return the ticket already created. Key unseen -> create, store,
     return. The model just attaches the key; it enforces nothing.
 """
@@ -17,7 +17,7 @@ import hashlib
 
 # --- Numbers and names from the problem, as named constants ---
 TICKET_ID = "ticket-4821"          # the incoming support ticket
-ACTION_CREATE_JIRA = "create-jira"  # the action, fixed per operation
+ACTION_CREATE_TICKET = "create-ticket"  # the action, fixed per operation
 KEY_TTL_HOURS = 24  # keys expire so the store never grows forever
 
 
@@ -29,38 +29,38 @@ def idempotency_key(ticket_id, action):
     return hashlib.sha256(raw).hexdigest()[:16]
 
 
-class JiraGateway:
+class TicketingGateway:
     """The store lives in the gateway, not the agent."""
 
     def __init__(self):
-        self.seen = {}  # key -> jira ticket id
+        self.seen = {}  # key -> ticket id
         self.created = 0
 
     def create_ticket(self, key, summary):
-        # The check happens BEFORE the Jira call, never after.
+        # The check happens BEFORE the ticketing call, never after.
         if key in self.seen:
             return self.seen[key], "RETURNED existing ticket -- no duplicate"
         self.created += 1
-        jira_id = f"DEV-{1000 + self.created}"
-        self.seen[key] = jira_id
-        return jira_id, "CREATED and stored"
+        ticket_id = f"TKT-{1000 + self.created}"
+        self.seen[key] = ticket_id
+        return ticket_id, "CREATED and stored"
 
 
 def demo():
-    gateway = JiraGateway()
-    key = idempotency_key(TICKET_ID, ACTION_CREATE_JIRA)
+    gateway = TicketingGateway()
+    key = idempotency_key(TICKET_ID, ACTION_CREATE_TICKET)
     print(f"{TICKET_ID}: checkout fails with intermittent 500s")
-    print(f"  key = hash(\"{TICKET_ID}\" + \"{ACTION_CREATE_JIRA}\") = {key}\n")
+    print(f"  key = hash(\"{TICKET_ID}\" + \"{ACTION_CREATE_TICKET}\") = {key}\n")
 
     # First attempt: creates the ticket and stores the key.
-    jira_id, outcome = gateway.create_ticket(key, "checkout 500s")
-    print(f"  attempt 1: {outcome} -> {jira_id}")
+    ticket_id, outcome = gateway.create_ticket(key, "checkout 500s")
+    print(f"  attempt 1: {outcome} -> {ticket_id}")
 
     # Failure path 1 -- the happy retry: the first response is lost
     # (timeout), so the agent retries with the SAME key. The gateway
     # finds the key and returns the same ticket. One ticket, not two.
-    jira_id, outcome = gateway.create_ticket(key, "checkout 500s")
-    print(f"  attempt 2 (retry, same key): {outcome} -> {jira_id}")
+    ticket_id, outcome = gateway.create_ticket(key, "checkout 500s")
+    print(f"  attempt 2 (retry, same key): {outcome} -> {ticket_id}")
     print(f"  tickets created: {gateway.created} (not 2)\n")
 
     # Failure path 2 -- the WRONG way: the retry hashes a reworded

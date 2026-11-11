@@ -21,11 +21,11 @@ TIER_HUMAN_ONLY = "human-only"        # never the agent; via PR after review
 # Operation-level registry: (tool, operation) -> tier. Nothing runs
 # without a registry entry -- an unregistered operation fails closed.
 TOOL_TIERS = {
-    ("clickhouse", "query"): TIER_READ_ONLY,
-    ("telemetry", "read_logs"): TIER_READ_ONLY,
+    ("logs", "query"): TIER_READ_ONLY,
+    ("observability", "read_logs"): TIER_READ_ONLY,
     ("git", "clone"): TIER_READ_ONLY,   # download the repo to check the code
     ("git", "fetch"): TIER_READ_ONLY,
-    ("jira", "create_ticket"): TIER_BOUNDED_WRITE,
+    ("ticketing", "create_ticket"): TIER_BOUNDED_WRITE,
     ("git", "commit"): TIER_HUMAN_ONLY,
     ("git", "push"): TIER_HUMAN_ONLY,   # push goes via PR, never direct
 }
@@ -58,24 +58,24 @@ def demo():
     print(f"{TICKET_ID}: checkout fails with intermittent 500s")
     print("  the agent works the ticket; the gateway decides each call:\n")
 
-    show("clickhouse", "query",
-         *gateway_call("clickhouse", "query"))
+    show("logs", "query",
+         *gateway_call("logs", "query"))
     show("git", "clone",
          *gateway_call("git", "clone"))
     # Bounded write without its key is held, not refused: the agent can
     # still do it once it attaches the key.
-    show("jira", "create_ticket",
-         *gateway_call("jira", "create_ticket"))
-    show("jira", "create_ticket",
-         *gateway_call("jira", "create_ticket",
-                       idempotency_key="9d526c7cb829ba6b"))  # hash(ticket-4821 + create-jira)
+    show("ticketing", "create_ticket",
+         *gateway_call("ticketing", "create_ticket"))
+    show("ticketing", "create_ticket",
+         *gateway_call("ticketing", "create_ticket",
+                       idempotency_key="defbc70b6943f12e"))  # hash(ticket-4821 + create-ticket)
     # The failure path: a code bug is confirmed, so the agent wants to
     # push a fix. Push is human-only. The gateway refuses, and the
     # agent escalates WITH the analysis instead of going silent.
     show("git", "push",
          *gateway_call("git", "push"))
     print("\n  ESCALATE to human: code bug confirmed in checkout, fix goes")
-    print("  to the dev agent as a Jira ticket; push happens via PR after")
+    print("  to the dev agent as a ticket; push happens via PR after")
     print("  a human reviews the dev agent's code. Nothing was pushed.")
 
 
