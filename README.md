@@ -33,5 +33,6 @@ Run either one with no setup: `python3 tool_gating.py`, `python3 idempotency_key
 
 ## References
 
-- Arun C. "BARC: Blast-Radius-Aware Agentic Control." March 2026. https://arun7.com/papers/BARC_Paper_v2.pdf — the blast-radius model behind the tiers: every tool classified into read-only, draft, bounded write, or irreversible, with safety enforced by tier rather than by model confidence.
+- Saltzer, J. H., & Schroeder, M. D. "The Protection of Information in Computer Systems." Proceedings of the IEEE, 1975 — least privilege: every program operates with the least set of privileges necessary to complete the job. The tiers are that principle applied to agent tools: what a tool may do is set by its consequence, not by the model's confidence.
+- Anthropic. "Building effective agents." Dec 2024. https://www.anthropic.com/engineering/building-effective-agents — tool design as an agent-computer interface: scope tools narrowly, document them well, and keep humans in the loop for consequential actions.
 - [epsilon-greedy](https://github.com/vnbharani/epsilon-greedy) — the exploration-vs-exploitation design paper this gating implements: the 3-try gate, the $5 exploration budget, and the blast-radius tiers.

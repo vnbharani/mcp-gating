@@ -1,4 +1,4 @@
-"""MCP tool gating sketch (BARC tiers) for a support-ticket agent.
+"""MCP tool gating sketch (consequence tiers) for a support-ticket agent.
 Core mechanism only -- NOT a solution.
 
   * The gate lives in the gateway, never in the model: the agent asks,
